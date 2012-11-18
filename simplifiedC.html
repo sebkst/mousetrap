@@ -1,0 +1,387 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+	<meta name="author" content="Sebastien Mahler" />
+	<meta name="rights-standard" content="cc by-nc" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+	<script>
+/* DERIVATED from artexdono flash archive at http://www.spazioultra.org/doni/mouse-trap */
+
+window.onload = function(){
+	
+	//var XX = screens.iPhone.map.width, YY= screens.iPhone.map.height;
+	var XX = window.innerWidth, YY= window.innerHeight;
+	//var stage = new Kinetic.Stage("container", XX, YY);
+    var stage = document.getElementById("myCanvas");
+	stage.setAttribute("width",XX);
+	stage.setAttribute("height",YY);
+	
+	var fl=15, cl=0.2, fw=4; // arrow : halflength, obtus angle of hat, stick width  
+	var	tx=Math.cos(Math.PI/10)*fl*1.2, ty=Math.sin(Math.PI/10)*fl*1.2; // hat
+	var MPmin = 1; // min move del mouse
+	var TPmin = 1; // min move al touchpad
+	// position of arrows
+	var iit = [ XX/4, XX/2, 3*XX/4, 0,0,0,0,0,0,0 ];
+    var jjt = [ YY/4, YY/2, 3*YY/4, 0,0,0,0,0,0,0 ];
+    //NB ARROWS :
+	var iitl=10, jjtl=10;
+	// optimis : redraw with proba 2/5 flip/rtoss
+	var RT=5,RF=2;
+	var iitl0=7, jjtl0=7, MAXdist=45; 
+	// var fl0=15,cl0=0.2,fw0=4;
+	
+	var ONMOVE=false; // for the event
+	var MOVEWINDOW=10; // timeout after the event  
+	// draw a hand
+	var H = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22];
+	var sch=0,SCH=23,scalehand=1.6;
+	while(sch<SCH){H[sch]=scalehand*H[sch]; sch=sch+1;};
+	//limiting the mouse
+	var offXX=0, offYY=0, uL=scalehand*1, lL=scalehand*7, rL=scalehand*12,  dL=scalehand*21;
+	var xil=offXX+lL, xim=XX-offXX-rL, yil=offYY+uL, yim=YY-offYY-dL;  	
+
+	var cri=0; var nbcredits=8; var cristep=8*100;
+    var creditstext=[" ","MAROTTA & RUSSO", "Mouse Trap", "2012", "HTML5 by Seb", "for ArtExDono","2006-2011", "Interactive Flash Animation"];
+    var creditscol=["#ffffff","#555555","#444444", "#333333", "#222222", "#111111", "#000000","#000000"];
+    var creditssize=[1,16,20,14,14,14,14,14];
+    var creditstextshown=[0,1,2, 3, 4, 5, 6,7];
+
+	showcredits = function(){
+		var st = document.getElementById("myCanvas");	
+		var ct = st.getContext("2d");
+		var sch=0;
+		var ra=0,rb=0,rc=XX,rd=YY;
+		if(XX<YY){rb=(YY-XX)/2; rd=rc;}
+		else{ra=(XX-YY)/2; rc=rd;}
+		if(cri>nbcredits-1){
+				ct.beginPath();
+				ct.fillStyle="#000000";
+				ct.lineWidth = 0;
+				ct.rect(0,0,XX,YY);
+				ct.fill();
+				ct.closePath();
+		}else{
+			if(cri==0){
+				ct.beginPath();
+				ct.fillStyle="#ffffff";
+				ct.lineWidth = 0;
+				ct.rect(ra,rb,rc,rd);
+				ct.fill();
+				ct.closePath();
+			};
+			ct.clearRect(0,0,XX,YY);//ct.clearRect(ra,rb,rc,rd);
+			sch=0;
+			while(sch<1+creditstextshown[cri]){
+				var scx = XX/2;
+				var scy = sch*YY/nbcredits;
+				var scft= creditssize[sch];
+				ct.textAlign = "center";
+				ct.textBaseline = "middle";
+				ct.fillStyle = creditscol[cri];
+				ct.font = scft+"pt Calibri";
+				ct.fillText(creditstext[sch], scx, scy);
+				sch=sch+1;
+			};
+		};
+		cri=cri+1;
+	};
+
+	
+function resizeME() {
+    var stage = document.getElementById("myCanvas");
+    var w2h = 1 / 1;
+    XX = window.innerWidth;
+    YY = window.innerHeight;
+    var nXX = XX, nYY = YY; 
+	var neww2h = XX / YY;
+    
+    if (neww2h > w2h) {
+        nXX = YY * w2h;
+        stage.style.height = YY + 'px';
+        stage.style.width = XX + 'px';
+    } else {
+        nYY = XX / w2h;
+        stage.style.width = XX + 'px';
+        stage.style.height = YY + 'px';
+    }
+    
+    stage.style.marginTop = '0px';
+    stage.style.marginLeft = '0px';
+    //stage.width = XX;
+    //stage.height = YY;
+    stage.setAttribute("width",XX);
+	stage.setAttribute("height",YY);
+	offXX=(XX-nXX)/2;
+	iitl=iitl0;
+	jjtl=jjtl0;
+	while( nXX/(iitl) > MAXdist ){ iitl+=1; }; 
+	while( nYY/(jjtl) > MAXdist ){ jjtl+=1; };
+	// fixing dissymetry due to approximations : iit[sch]=   1+   (mm+sch*nXX/iitl);
+	var mm=offXX + nXX/(2*(iitl+1));
+	var sch=0; 
+    while(sch<iitl){ iit[sch]=1+(mm+sch*nXX/iitl); sch+=1;}
+    sch=0; 
+    offYY=(YY-nYY)/2;
+    mm = offYY+ nYY/(2*(jjtl+1));  
+    while(sch<jjtl){ jjt[sch]=1+(mm+sch*nYY/jjtl); sch+=1;}
+	
+	xil=offXX+lL;
+	xim=XX-offXX-rL;
+	yil=offYY+uL;
+	yim=YY-offYY-dL;  	
+	
+	var ct = stage.getContext("2d");
+	ct.beginPath();
+	ct.fillStyle = "#000000";
+	ct.lineWidth = 0;
+	ct.rect(0,0,ct.canvas.width,ct.canvas.height);
+	ct.closePath();
+	ct.fill();
+	mold.x=XX/2; mold.y=YY/2;
+	if(cri<nbcredits){
+		sch=0;
+		while(sch<1+nbcredits){
+		   setTimeout(function(){showcredits()},sch*cristep);
+		   sch=sch+1;
+		}; 
+	}else{ setTimeout(rotateAr(mold,stage), MOVEWINDOW); };
+	
+};
+
+	// see http://developer.apple.com/library/IOs/#documentation/AppleApplications/Reference/SafariWebContent/HandlingEvents/HandlingEvents.html#//apple_ref/doc/uid/TP40006511-SW1
+	// or  http://tinyurl.com/ck95ncn
+
+		getMousePos = function(canvas,evt,typ){
+			// get canvas position
+			//var obj = document.getElementById("container");
+			var obj=canvas;
+			var top = 0;
+			var left = 0;
+			while (obj.tagName != 'BODY') {
+				top += obj.offsetTop;
+				left += obj.offsetLeft;
+				obj = obj.offsetParent;
+			};
+			if(typ>0){
+				left=evt.clientX - left + 	window.pageXOffset;
+				top=evt.clientY - top + window.pageYOffset;
+			}else{
+				if(evt.touches.length > 0 ){
+					if(typ<0){evt.preventDefault();};
+					left=evt.touches[0].pageX - left + window.pageXOffset;
+					top=evt.touches[0].pageY - top + window.pageYOffset;
+				} else return null;
+			};
+			var conds=0;
+			if(left<xil){left=xil;conds+=1;};
+			if(left>xim){left=xim;conds+=1;};
+			if(top<yil){top=yil;conds+=1;};
+			if(top>yim){top=yim;conds+=1;};
+			return {x:left,y:top};
+		};
+
+		
+drawarrow = function(posx,posy,mousepos,stage){
+//	return new Kinetic.Shape(function(){
+		//var canvas = this.getCanvas();
+		var ct = stage.getContext("2d");
+		
+		ct.strokeStyle = "#000000";
+		ct.fillStyle = "#000000";
+//		ct.clearRect(posx-fl-fw, posy-fl-fw,fl+fl+fw+fw,fl+fl+fw+fw);
+		
+		var fa,fb,hyp=Math.sqrt((posx-mousepos.x)*(posx-mousepos.x)+(posy-mousepos.y)*(posy-mousepos.y));
+		if (hyp<0.1){
+			hyp=Math.sqrt((posx-mold.x)*(posx-mold.x)+(posy-mold.y)*(posy-mold.y));
+			fa=(-posx + mold.x)/hyp;
+			fb=(-posy + mold.y)/hyp;
+		} else {
+			fa=(-posx + mousepos.x)/hyp;
+			fb=(-posy + mousepos.y)/hyp;
+		}
+		var a=fl*fa;
+		var b=fl*fb;
+		ct.lineWidth = fw;	
+		ct.beginPath();   
+		ct.moveTo(posx-a, posy-b);
+		ct.lineTo(posx+cl*a, posy+cl*b);
+		ct.closePath();
+		ct.stroke();
+		var vtx=tx*fa + ty*fb;
+		var vty=tx*fb - ty*fa;
+		ct.beginPath();   
+		ct.lineWidth = 1;
+		ct.moveTo(posx+a,posy+b);
+		ct.lineTo(posx+a-vtx, posy+b-vty);
+		ct.lineTo(posx+cl*a, posy+b*cl);
+		ct.lineTo(posx+a-vtx+2.0*ty*fb, posy+b-vty-2.0*ty*fa);
+		ct.lineTo(posx+a,posy+b);
+		ct.closePath();
+		ct.fill();
+		ct.stroke();
+	// });
+};
+		
+        clearhand = function(pos,canvas){
+			var ct = canvas.getContext("2d");
+			//ct.beginPath();
+			//ct.rect(10,10,ct.canvas.width-10,ct.canvas.height-10);
+			//ct.fill();
+			//ct.clearRect(0,0,ct.canvas.width,ct.canvas.height);
+			//ct.clearRect(pos.x-7,pos.y-1,19,23);
+			ct.clearRect(offXX,offYY,XX-offXX-offXX+1,YY-offYY-offYY+1);
+		};
+        
+		drawhand = function(pos,canvas){
+		//return new Kinetic.Shape(function(){
+        //            var canvas = this.getCanvas();
+                    var ct = canvas.getContext("2d");
+					ct.clearRect(pos.x-H[1],pos.y,H[3],H[21]);
+					ct.clearRect(pos.x+H[2],pos.y+H[6],H[2],H[15]);
+					ct.clearRect(pos.x+H[4],pos.y+H[8],H[2],H[13]);
+					ct.clearRect(pos.x+H[6],pos.y+H[10],H[2],H[11]);
+					ct.clearRect(pos.x+H[8],pos.y+H[12],H[3],H[3]);
+					ct.strokeStyle = "#000000";
+					ct.fillStyle = "#FFFFFF";
+					ct.beginPath();
+					ct.lineWidth = H[1];
+					ct.moveTo(pos.x,pos.y);
+					ct.lineTo(pos.x-H[1], pos.y+H[1]);
+					ct.lineTo(pos.x-H[1], pos.y+H[13]);
+					ct.moveTo(pos.x-H[1], pos.y+H[11]);
+					ct.lineTo(pos.x-H[4], pos.y+H[8]);
+					ct.lineTo(pos.x-H[6], pos.y+H[8]);
+					ct.lineTo(pos.x-H[6], pos.y+H[10]);
+					ct.lineTo(pos.x-H[3], pos.y+H[14]);
+					ct.lineTo(pos.x, pos.y+H[21]);
+					ct.lineTo(pos.x+H[9], pos.y+H[21]);
+					ct.lineTo(pos.x+H[11], pos.y+H[15]);
+					ct.lineTo(pos.x+H[11], pos.y+H[11]);
+					ct.lineTo(pos.x+H[9], pos.y+H[9]);
+					ct.lineTo(pos.x+H[8], pos.y+H[10]);
+					ct.lineTo(pos.x+H[8], pos.y+H[12]);
+					ct.moveTo(pos.x+H[8], pos.y+H[9]);
+					ct.lineTo(pos.x+H[6], pos.y+H[8]);
+					ct.lineTo(pos.x+H[5], pos.y+H[7]);
+					ct.lineTo(pos.x+H[5], pos.y+H[11]);
+					ct.moveTo(pos.x+H[5], pos.y+H[7]);
+					ct.lineTo(pos.x+H[3], pos.y+H[6]);
+					ct.lineTo(pos.x+H[2], pos.y+H[5]);
+					ct.lineTo(pos.x+H[2], pos.y+H[10]);
+					ct.moveTo(pos.x+H[2], pos.y+H[5]);
+					ct.lineTo(pos.x+H[2], pos.y+H[1]);
+					ct.lineTo(pos.x, pos.y);
+					ct.closePath();
+					ct.fill();
+					ct.stroke();
+  //              });
+		};
+		
+		
+		rotateAr = function(mp,stage){ 
+			//stage.removeAll();
+			//stage.clearAll();
+			clearhand(mold,stage);			
+			var i=0,j=0;
+			//var ret=[h];
+			while(i<iitl){
+				j=0;
+				while(j<jjtl){
+					drawarrow(iit[i],jjt[j],mp,stage);
+					//stage.add(a);
+					//ret.push(a);
+					j=j+1;
+				}
+				i=i+1;
+			}
+			var h = drawhand(mp,stage);
+			//stage.add(h);
+		};
+
+	
+	ONEVENT = function(evt,typ){
+		if((!ONMOVE)){ 		//if( Math.random(RT)<=RF){
+			ONMOVE=true;
+			var mp = getMousePos(stage,evt,typ);
+			if(mp!=null) {
+				if(Math.abs(mold.x-mp.x)>=MPmin || Math.abs(mold.y-mp.y)>=MPmin ) {
+					rotateAr(mp,stage);
+					mold=mp;
+				}; /*else{
+				ct=stage.getContext("2d");
+				ct.beginPath();
+				ct.fillStyle = "#FF0000";
+				ct.rect(mp.x-50,mp.y-50,100,100);
+				ct.fill();
+				};
+			}else{
+				ct=stage.getContext("2d");
+				ct.beginPath();
+				ct.fillStyle = "#EEEE00";
+				ct.rect(10,10,100,100);
+				ct.fill();*/
+			};
+			setTimeout( function(){ ONMOVE=false; }, MOVEWINDOW );
+		} /*else{ct=stage.getContext("2d");ct.beginPath();ct.fillStyle="#00FFFF";ct.rect(550,550,50,50);ct.fill();};*/
+	};
+  setTimeout(function(){
+    var stage = document.getElementById("myCanvas");
+ 	stage.addEventListener("click", function(evt){ 
+		ONEVENT(evt,1);
+	});
+ 	stage.addEventListener("mousemove", function(evt){ 
+		ONEVENT(evt,1);
+	});
+	
+	
+ 	stage.addEventListener("touchmove", function(evt){ 
+		ONEVENT(evt,0);
+	},false);
+	stage.addEventListener("touchstart", function(evt){ 
+		ONEVENT(evt,-1);
+	},false);	
+	stage.addEventListener("touchend", function(evt){ 
+		ONEVENT(evt,-1);
+	},false);
+	stage.addEventListener("touchcancel", function(evt){ 
+		ONEVENT(evt,0);
+	},false);
+ 
+
+	window.addEventListener('resize', resizeME, false);
+	window.addEventListener('orientationchange', resizeME, false);
+
+	rotateAr(mold,stage);	
+ 
+ }, (nbcredits*cristep+cristep/2) );
+	var mold={x:XX/2,y:YY/2};
+	
+	setTimeout(resizeME, MOVEWINDOW);
+
+};  // end onload
+        </script>
+<script type="application/x-javascript"> addEventListener("load", function(){ setTimeout(
+hideURLbar, 0); }, false); function hideURLbar(){ window.scrollTo(0,1); } </script>
+		<style>
+		body {
+			margin: 0px;
+			padding: 0px;
+			background-color: #000000;
+			
+		}
+		canvas {
+			background-color: #fff;
+			padding: 0px;
+			margin: auto;
+			display: block;
+			border: none; 
+			/* 3px solid #FFFFFF; */
+			cursor: none;			
+		}
+        </style>
+    </head>											
+    <body>
+        <canvas id="myCanvas" width="100%" height="100%">
+        </canvas>
+    </body>
+</html>
